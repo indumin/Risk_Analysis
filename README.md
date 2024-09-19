@@ -36,11 +36,13 @@ This project can be a valuable addition to any financial data analyst's portfoli
 Working with relational databases and SQL queries.
 Detecting patterns and anomalies in transaction data.
 Understanding key concepts in fraud detection within the banking sector.
+
 **How to Use:**
 Clone or download the project files.
 Import the SQL script into your database.
 Run the fraud detection queries to analyze the sample dataset provided.
 Review the query results to spot suspicious activity.
+
 **Technologies Used:**
 SQL: The project heavily relies on SQL for querying and analyzing data.
 Relational Database: The data is stored in a relational structure, allowing for complex joins and queries across multiple tables.
