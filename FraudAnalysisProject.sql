@@ -327,6 +327,85 @@ ALTER TABLE `Transactions`
   ADD CONSTRAINT `transactions_ibfk_1` FOREIGN KEY (`AccountID`) REFERENCES `Accounts` (`AccountID`);
 COMMIT;
 
+-- Fraud Analysis
+-- 1. Detect Unusually Large Transactions
+-- This query finds transactions above a certain threshold (e.g., $10,000).
+SELECT 
+    TransactionID, AccountID, Amount, TransactionDate
+FROM 
+    Transactions
+WHERE 
+    Amount > 10000;
+
+-- 2. Detect Multiple Large Transactions in a Short Timeframe
+-- This query finds accounts with more than 3 large transactions (above $10,000) within 7 days.
+SELECT 
+    AccountID, COUNT(TransactionID) AS LargeTransactionCount, MIN(TransactionDate) AS FirstTransactionDate, MAX(TransactionDate) AS LastTransactionDate
+FROM 
+    Transactions
+WHERE 
+    Amount > 10000
+GROUP BY 
+    AccountID
+HAVING 
+    LargeTransactionCount > 3
+    AND DATEDIFF(MAX(TransactionDate), MIN(TransactionDate)) <= 7;
+
+-- 3. Detect Inconsistent Loan Payments
+-- This query identifies large, sudden loan payments that could indicate fraud.
+SELECT 
+    LoanID, SUM(PaymentAmount) AS TotalPaid, COUNT(PaymentID) AS NumberOfPayments
+FROM 
+    LoanPayments
+GROUP BY 
+    LoanID
+HAVING 
+    SUM(PaymentAmount) > 50000  -- Threshold for large payments
+    AND COUNT(PaymentID) <= 2;  -- Few payments made
+
+-- 4. Detect Credit Card Misuse
+-- This query finds credit cards with high spending amounts in a short period.
+SELECT 
+    CardID, COUNT(TransactionID) AS TransactionCount, SUM(Amount) AS TotalSpent, MIN(TransactionDate) AS FirstTransaction, MAX(TransactionDate) AS LastTransaction
+FROM 
+    CreditCardTransactions
+WHERE 
+    TransactionType = 'Purchase'
+GROUP BY 
+    CardID
+HAVING 
+    TotalSpent > 15000  -- High total spending threshold
+    AND DATEDIFF(MAX(TransactionDate), MIN(TransactionDate)) <= 7;  -- Short timeframe (e.g., 7 days)
+
+-- 5. Detect Frequent Cash Advances
+-- This query finds credit cards with more than 2 large cash advances in a short period.
+SELECT 
+    CardID, COUNT(TransactionID) AS CashAdvanceCount, SUM(Amount) AS TotalCashAdvanced
+FROM 
+    CreditCardTransactions
+WHERE 
+    TransactionType = 'Cash Advance'
+GROUP BY 
+    CardID
+HAVING 
+    CashAdvanceCount > 2  -- More than 2 cash advances
+    AND SUM(Amount) > 10000;  -- Large total cash advances
+
+-- 6. Detect Geographically Distant Transactions
+-- This query finds transactions for the same account occurring at different branches on the same day.
+SELECT 
+    T1.TransactionID AS TransactionID_1, T2.TransactionID AS TransactionID_2, T1.AccountID, T1.TransactionDate, B1.BranchLocation AS Branch_1, B2.BranchLocation AS Branch_2
+FROM 
+    Transactions T1
+JOIN 
+    Transactions T2 ON T1.AccountID = T2.AccountID AND T1.TransactionDate = T2.TransactionDate AND T1.TransactionID <> T2.TransactionID
+JOIN 
+    Branches B1 ON T1.AccountID = B1.BranchID
+JOIN 
+    Branches B2 ON T2.AccountID = B2.BranchID
+WHERE 
+    B1.BranchLocation <> B2.BranchLocation;  -- Different branches for same-day transactions
+
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
